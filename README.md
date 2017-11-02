@@ -9,4 +9,4 @@
 
 
 ## Para executar
-- `python run.py` (usem o Postman para testar os métodos)
+- `python run.py`

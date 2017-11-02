@@ -87,4 +87,7 @@ def EnviarEventos():
         r2 = response2.json()
 
 scheduler = BlockingScheduler()
+scheduler.add_job(AtualizarRfids, 'interval', seconds=97)
+scheduler.add_job(AtualizarHorarios, 'interval', seconds=83)
+scheduler.add_job(EnviarEventos, 'interval', seconds=77)
 scheduler.start()
