@@ -12,10 +12,10 @@ class RfidsPermitidos(db.Model, CRUD):
 	tipo = db.Column(db.Enum(TipoUsuario), nullable=False)
 	last_update = db.Column(db.DateTime(), nullable=False)
 
-	def __init__(self, rfid, tipo):
+	def __init__(self, rfid, tipo, last_update):
 		self.rfid = rfid
 		self.tipo = tipo
-		self.last_update = datetime.now()
+		self.last_update = last_update
 
 
 class RfidsPermitidosSchema(Schema):

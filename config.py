@@ -4,6 +4,9 @@
 # HOST = "localhost"
 # SECRET_KEY = "a1841b5ef57d8de68b17203721a8b094f05e1e319bf23aeb"
 
+nome_sala_rasp = "e001"
+last_update_fake = "2001-01-01T00:00:00+00:00"
+
 # SQLAlchemy
 SQLALCHEMY_ECHO = True
 SQLALCHEMY_TRACK_MODIFICATIONS = True

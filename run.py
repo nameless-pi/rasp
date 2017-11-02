@@ -3,87 +3,88 @@ from datetime import datetime
 import dateutil.parser
 from base import db
 from apscheduler.schedulers.blocking import BlockingScheduler
+from sqlalchemy import desc
 
 from rfids_permitidos_model import RfidsPermitidos, RfidsPermitidosSchema
 from horarios_permitidos_model import HorariosPermitidos, HorariosPermitidosSchema
 from eventos_model import Eventos, EventosSchema
 
+from config import nome_sala_rasp, last_update_fake
+
 schema = RfidsPermitidosSchema()
 schema2 = HorariosPermitidosSchema()
 schema3 = EventosSchema()
 
-def AtulizarRfids():
+def AtualizarRfids():
     #query
-    rfids_permitidos_query = RfidsPermitidos.query.all()
-    rfids_permitidos = schema.dump(rfids_permitidos_query, many=True).data
+    rfids_permitidos_query = RfidsPermitidos.query.order_by(desc(RfidsPermitidos.last_update)).first()
+    rfids_permitidos = schema.dump(rfids_permitidos_query).data
 
     #se bd vazio
-    if rfids_permitidos == []:
-        data={"last_update": "2001-01-01T00:00:00+00:00","sala": "e001"}
+    if rfids_permitidos == {}:
+        dados={"last_update": last_update_fake,"sala": nome_sala_rasp}
     else:
-        data={"last_update": rfids_permitidos[0]["last_update"], "sala": "e001"}
-
+        dados={"last_update": rfids_permitidos["last_update"], "sala": nome_sala_rasp}
 
     #post
-    response = requests.post("http://localhost:5000/api/v1/rasp/rfid", json=data)
+    response = requests.post("http://localhost:5000/api/v1/rasp/rfid", json=dados)
     r = response.json()
-    print(r)
 
     #persiste
-    for r1 in r:
-        novo_rfid = RfidsPermitidos(r1["rfid"], r1["tipo"])
-        print(novo_rfid)
+    for adicionar in r["novos"]:
+        novo_rfid = RfidsPermitidos(adicionar["rfid"], adicionar["tipo"], dateutil.parser.parse(adicionar["last_update"]))
         novo_rfid.add(novo_rfid)
+    
+    #remove
+    for remover in r["removidos"]:
+        rfids_permitidos = RfidsPermitidos.query.filter(RfidsPermitidos.rfid == remover["rfid"]).first()
+        if rfids_permitidos:
+            rfids_permitidos.delete(rfids_permitidos)
 
 def AtualizarHorarios():
     #query
-    horarios_permitidos_query = HorariosPermitidos.query.all()
-    horarios_permitidos = schema2.dump(horarios_permitidos_query, many=True).data
+    horarios_permitidos_query = HorariosPermitidos.query.order_by(desc(HorariosPermitidos.last_update)).first()
+    horarios_permitidos = schema2.dump(horarios_permitidos_query).data
 
     #se bd vazio
-    if horarios_permitidos == []:
-        data={"last_update": "2001-01-01T00:00:00+00:00","sala": "e001"}
+    if horarios_permitidos == {}:
+        dados={"last_update": last_update_fake,"sala": nome_sala_rasp}
     else:
-        data={"last_update": horarios_permitidos[0]["last_update"], "sala": "e001"}
-
+        dados={"last_update": horarios_permitidos["last_update"], "sala": nome_sala_rasp}
 
     #post
-    response = requests.post("http://localhost:5000/api/v1/rasp/horario", json=data)
+    response = requests.post("http://localhost:5000/api/v1/rasp/horario", json=dados)
     r = response.json()
-    print(r)
 
     #persiste
-    for r1 in r:
-        novo_horario = HorariosPermitidos(r1["dia"], r1["hora_inicio"], r1["hora_fim"], r1["tipo_usuario"], dateutil.parser.parse(r1["last_update"]))
-        print(novo_horario)
+    for adicionar in r["novos"]:
+        novo_horario = HorariosPermitidos(adicionar["dia"], adicionar["hora_inicio"], adicionar["hora_fim"], adicionar["tipo_usuario"], dateutil.parser.parse(adicionar["last_update"]))
         novo_horario.add(novo_horario)
+    
+    #remove
+    for remover in r["removidos"]:
+        horarios_permitidos = HorariosPermitidos.query.filter(HorariosPermitidos.dia == remover["dia"]).filter(HorariosPermitidos.hora_inicio == remover["hora_inicio"]).filter(HorariosPermitidos.hora_fim == remover["hora_fim"]).filter(HorariosPermitidos.tipo_usuario == remover["tipo_usuario"]).first()
+        if horarios_permitidos:
+            horarios_permitidos.delete(horarios_permitidos)
 
 def EnviarEventos():
-    data={"sala": "e001"}
+    dados={"sala": nome_sala_rasp}
 
-    response = requests.post("http://localhost:5000/api/v1/rasp/checkevento", json=data)
+    response = requests.post("http://localhost:5000/api/v1/rasp/checkevento", json=dados)
     r = response.json()
 
     hora = dateutil.parser.parse(r[0]["horario"])
 
-    eventos_query = Eventos.query.all()
+    eventos_query = Eventos.query.filter(Eventos.horario > hora)
     eventos = schema3.dump(eventos_query, many=True).data
-    results = []
-    if eventos != []:
-        for e in eventos:
-            if dateutil.parser.parse(e["horario"]) > hora:
-                adicionar = {}
-                adicionar.update({"rfid":e["rfid"]})
-                adicionar.update({"evento":e["evento"]})
-                adicionar.update({"horario":e["horario"]})
-                adicionar.update({"sala":"e001"})
-                response2 = requests.post("http://localhost:5000/api/v1/rasp/evento", json=adicionar)
-                r2 = response2.json()
-                adicionar = {}
-
+    for e in eventos:
+        adicionar = {}
+        adicionar.update({"rfid":e["rfid"]})
+        adicionar.update({"evento":e["evento"]})
+        adicionar.update({"horario":e["horario"]})
+        adicionar.update({"sala":nome_sala_rasp})
+        response2 = requests.post("http://localhost:5000/api/v1/rasp/evento", json=adicionar)
+        r2 = response2.json()
 
 scheduler = BlockingScheduler()
-scheduler.add_job(AtulizarRfids, 'interval', seconds=1000)
-scheduler.add_job(AtualizarHorarios, 'interval', seconds=2000)
-scheduler.add_job(EnviarEventos, 'interval', seconds=11)
 scheduler.start()
