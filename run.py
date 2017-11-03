@@ -3,6 +3,7 @@ from datetime import datetime
 import dateutil.parser
 from base import db
 from apscheduler.schedulers.blocking import BlockingScheduler
+import time
 from sqlalchemy import desc
 
 from rfids_permitidos_model import RfidsPermitidos, RfidsPermitidosSchema
@@ -98,8 +99,22 @@ def EnviarEventos():
         response2 = requests.post("http://localhost:5000/api/v1/rasp/evento", json=adicionar)
         r2 = response2.json()
 
-scheduler = BlockingScheduler()
-scheduler.add_job(AtualizarRfids, 'interval', minutes=5)
-scheduler.add_job(AtualizarHorarios, 'interval', minutes=6)
-scheduler.add_job(EnviarEventos, 'interval', minutes=7)
-scheduler.start()
+def tasks():
+    time.sleep(10)
+    AtualizarRfids()
+    time.sleep(10)
+    AtualizarHorarios()
+    time.sleep(10)
+    EnviarEventos()
+    time.sleep(100)
+    tasks()
+
+tasks()
+
+
+
+# scheduler = BlockingScheduler()
+# scheduler.add_job(AtualizarRfids, 'interval', seconds=61)
+# scheduler.add_job(AtualizarHorarios, 'interval', seconds=63)
+# scheduler.add_job(EnviarEventos, 'interval', seconds=67)
+# scheduler.start()
