@@ -7,7 +7,7 @@ class Eventos(db.Model, CRUD):
 	__tablename__ = "eventos"
 
 	id = db.Column(db.Integer, primary_key=True)
-	rfid = db.Column(db.String(16), nullable=False, unique=True)
+	rfid = db.Column(db.String(16), nullable=False)
 	evento = db.Column(db.Enum(Evento), nullable=False)
 	horario = db.Column(db.DateTime, nullable=False)
 

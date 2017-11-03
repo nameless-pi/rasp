@@ -14,7 +14,8 @@ class HorariosPermitidos(db.Model, CRUD):
 	tipo_usuario = db.Column(db.Enum(TipoUsuario), nullable=False)
 	last_update = db.Column(db.DateTime(), nullable=False)
     
-	def __init__(self, dia, hora_inicio, hora_fim, tipo_usuario, last_update):
+	def __init__(self, id, dia, hora_inicio, hora_fim, tipo_usuario, last_update):
+		self.id = id
 		self.dia = dia
 		self.hora_inicio = hora_inicio
 		self.hora_fim = hora_fim
@@ -23,6 +24,7 @@ class HorariosPermitidos(db.Model, CRUD):
 
 
 class HorariosPermitidosSchema(Schema):
+	id = fields.Integer()
 	dia = EnumDia()
 	hora_inicio = fields.Time()
 	hora_fim = fields.Time()

@@ -32,8 +32,10 @@ def AtualizarRfids():
 
     #persiste
     for adicionar in r["novos"]:
-        novo_rfid = RfidsPermitidos(adicionar["rfid"], adicionar["tipo"], dateutil.parser.parse(adicionar["last_update"]))
-        novo_rfid.add(novo_rfid)
+        rfids_permitidos = RfidsPermitidos.query.filter(RfidsPermitidos.rfid == adicionar["rfid"]).first()
+        if not rfids_permitidos:
+            novo_rfid = RfidsPermitidos(adicionar["rfid"], adicionar["tipo"], dateutil.parser.parse(adicionar["last_update"]))
+            novo_rfid.add(novo_rfid)
     
     #remove
     for remover in r["removidos"]:
@@ -58,12 +60,22 @@ def AtualizarHorarios():
 
     #persiste
     for adicionar in r["novos"]:
-        novo_horario = HorariosPermitidos(adicionar["dia"], adicionar["hora_inicio"], adicionar["hora_fim"], adicionar["tipo_usuario"], dateutil.parser.parse(adicionar["last_update"]))
-        novo_horario.add(novo_horario)
+        horario = HorariosPermitidos.query.get(adicionar["id"])
+        if not horario:
+            novo_horario = HorariosPermitidos(adicionar["id"], adicionar["dia"], adicionar["hora_inicio"], adicionar["hora_fim"], adicionar["tipo_usuario"], dateutil.parser.parse(adicionar["last_update"]))
+            novo_horario.add(novo_horario)
+        else:
+            horario.dia = adicionar["dia"]
+            horario.hora_inicio = adicionar["hora_inicio"]
+            horario.hora_fim = adicionar["hora_fim"]
+            horario.tipo_usuario = adicionar["tipo_usuario"]
+            horario.last_update = dateutil.parser.parse(adicionar["last_update"])
+            horario.update()
+
     
     #remove
     for remover in r["removidos"]:
-        horarios_permitidos = HorariosPermitidos.query.filter(HorariosPermitidos.dia == remover["dia"]).filter(HorariosPermitidos.hora_inicio == remover["hora_inicio"]).filter(HorariosPermitidos.hora_fim == remover["hora_fim"]).filter(HorariosPermitidos.tipo_usuario == remover["tipo_usuario"]).first()
+        horarios_permitidos = HorariosPermitidos.query.filter(HorariosPermitidos.id == remover["id"]).first()
         if horarios_permitidos:
             horarios_permitidos.delete(horarios_permitidos)
 
@@ -73,7 +85,7 @@ def EnviarEventos():
     response = requests.post("http://localhost:5000/api/v1/rasp/checkevento", json=dados)
     r = response.json()
 
-    hora = dateutil.parser.parse(r[0]["horario"])
+    hora = dateutil.parser.parse(r["horario"])
 
     eventos_query = Eventos.query.filter(Eventos.horario > hora)
     eventos = schema3.dump(eventos_query, many=True).data
@@ -87,7 +99,7 @@ def EnviarEventos():
         r2 = response2.json()
 
 scheduler = BlockingScheduler()
-scheduler.add_job(AtualizarRfids, 'interval', seconds=97)
-scheduler.add_job(AtualizarHorarios, 'interval', seconds=83)
-scheduler.add_job(EnviarEventos, 'interval', seconds=77)
+scheduler.add_job(AtualizarRfids, 'interval', minutes=5)
+scheduler.add_job(AtualizarHorarios, 'interval', minutes=6)
+scheduler.add_job(EnviarEventos, 'interval', minutes=7)
 scheduler.start()
