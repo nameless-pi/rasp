@@ -4,8 +4,13 @@
 # HOST = "localhost"
 # SECRET_KEY = "a1841b5ef57d8de68b17203721a8b094f05e1e319bf23aeb"
 
+# Requisições
 nome_sala_rasp = "e001"
 last_update_fake = "2001-01-01T00:00:00+00:00"
+host = "localhost"
+port = "5000"
+prefix = "/api/v1/rasp/"
+
 
 # SQLAlchemy
 SQLALCHEMY_ECHO = True

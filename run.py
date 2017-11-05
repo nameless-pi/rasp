@@ -10,16 +10,16 @@ from rfids_permitidos_model import RfidsPermitidos, RfidsPermitidosSchema
 from horarios_permitidos_model import HorariosPermitidos, HorariosPermitidosSchema
 from eventos_model import Eventos, EventosSchema
 
-from config import nome_sala_rasp, last_update_fake
+from config import nome_sala_rasp, last_update_fake, host, port, prefix
 
-schema = RfidsPermitidosSchema()
-schema2 = HorariosPermitidosSchema()
-schema3 = EventosSchema()
+schemaRfid = RfidsPermitidosSchema()
+schemaHorario = HorariosPermitidosSchema()
+schemaEvento = EventosSchema()
 
 def AtualizarRfids():
     #query
     rfids_permitidos_query = RfidsPermitidos.query.order_by(desc(RfidsPermitidos.last_update)).first()
-    rfids_permitidos = schema.dump(rfids_permitidos_query).data
+    rfids_permitidos = schemaRfid.dump(rfids_permitidos_query).data
 
     #se bd vazio
     if rfids_permitidos == {}:
@@ -28,7 +28,7 @@ def AtualizarRfids():
         dados={"last_update": rfids_permitidos["last_update"], "sala": nome_sala_rasp}
 
     #post
-    response = requests.post("http://localhost:5000/api/v1/rasp/rfid", json=dados)
+    response = requests.post("http://"+host+":"+port+prefix+"rfid", json=dados)
     r = response.json()
 
     #persiste
@@ -37,6 +37,10 @@ def AtualizarRfids():
         if not rfids_permitidos:
             novo_rfid = RfidsPermitidos(adicionar["rfid"], adicionar["tipo"], dateutil.parser.parse(adicionar["last_update"]))
             novo_rfid.add(novo_rfid)
+        else:
+            if rfids_permitidos.tipo != adicionar["tipo"]:
+                rfids_permitidos.tipo = adicionar["tipo"]
+                rfids_permitidos.update()
     
     #remove
     for remover in r["removidos"]:
@@ -47,7 +51,7 @@ def AtualizarRfids():
 def AtualizarHorarios():
     #query
     horarios_permitidos_query = HorariosPermitidos.query.order_by(desc(HorariosPermitidos.last_update)).first()
-    horarios_permitidos = schema2.dump(horarios_permitidos_query).data
+    horarios_permitidos = schemaHorario.dump(horarios_permitidos_query).data
 
     #se bd vazio
     if horarios_permitidos == {}:
@@ -56,7 +60,7 @@ def AtualizarHorarios():
         dados={"last_update": horarios_permitidos["last_update"], "sala": nome_sala_rasp}
 
     #post
-    response = requests.post("http://localhost:5000/api/v1/rasp/horario", json=dados)
+    response = requests.post("http://"+host+":"+port+prefix+"horario", json=dados)
     r = response.json()
 
     #persiste
@@ -83,20 +87,20 @@ def AtualizarHorarios():
 def EnviarEventos():
     dados={"sala": nome_sala_rasp}
 
-    response = requests.post("http://localhost:5000/api/v1/rasp/checkevento", json=dados)
+    response = requests.post("http://"+host+":"+port+prefix+"checkevento", json=dados)
     r = response.json()
 
     hora = dateutil.parser.parse(r["horario"])
 
     eventos_query = Eventos.query.filter(Eventos.horario > hora)
-    eventos = schema3.dump(eventos_query, many=True).data
+    eventos = schemaEvento.dump(eventos_query, many=True).data
     for e in eventos:
         adicionar = {}
         adicionar.update({"rfid":e["rfid"]})
         adicionar.update({"evento":e["evento"]})
         adicionar.update({"horario":e["horario"]})
         adicionar.update({"sala":nome_sala_rasp})
-        response2 = requests.post("http://localhost:5000/api/v1/rasp/evento", json=adicionar)
+        response2 = requests.post("http://"+host+":"+port+prefix+"evento", json=adicionar)
         r2 = response2.json()
 
 def tasks():
