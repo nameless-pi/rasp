@@ -8,7 +8,7 @@ class RfidsPermitidos(db.Model, CRUD):
 	__tablename__ = "rfids_permitidos"
 
 	id = db.Column(db.Integer, primary_key=True)
-	rfid = db.Column(db.String(16), nullable=False, unique=True)
+	rfid = db.Column(db.String(16), nullable=False)
 	tipo = db.Column(db.Enum(TipoUsuario), nullable=False)
 	last_update = db.Column(db.DateTime(), nullable=False)
 
